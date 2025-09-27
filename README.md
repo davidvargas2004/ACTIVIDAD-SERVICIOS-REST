@@ -160,3 +160,14 @@ sudo apt update
 
 # Instalar dependencias necesarias
 sudo apt install pkg-config libmysqlclient-dev build-essential python3-dev
+
+
+
+
+
+
+ python.exe -m pip install --upgrade pip
+
+
+
+ pip install Flask-MySQLdb
