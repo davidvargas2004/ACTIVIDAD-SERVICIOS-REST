@@ -1,107 +1,133 @@
 # Paso 11: Importación de librerías
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template # Se añade render_template
 from config import config
 from flask_mysqldb import MySQL
 
-# Paso 12: Establecer conexión con el servidor
-app=Flask(__name__)
-conexion = MySQL(app)
+# Paso 12: Inicialización de la aplicación Flask
+app = Flask(__name__)
+# Conexión a la base de datos
+db_connection = MySQL(app)
 
-# Paso 13: Función GET para listar los datos
+# --- RUTA PARA SERVIR LA INTERFAZ DE USUARIO ---
+
+@app.route('/')
+def index():
+    """
+    Renderiza la página principal (frontend) que consumirá la API.
+    """
+    return render_template('index.html')
+
+# --- RUTAS DE LA API (estas no cambian) ---
+
+# Paso 13: Función GET para listar todos los clientes
 @app.route('/clientes', methods=['GET'])
 def listar_clientes():
     try:
-        cursor = conexion.connection.cursor()
-        sql = "SELECT * FROM cliente"
+        cursor = db_connection.connection.cursor()
+        sql = "SELECT codigo, nombre, apellido, direccion, telefono, email FROM cliente"
         cursor.execute(sql)
         datos = cursor.fetchall()
-        clientes=[]
+        clientes = []
         for fila in datos:
-            cliente= {'codigo':fila[0],'nombre':fila[1],'apellido':fila[2],'direccion':fila[3]}
+            cliente = {
+                'codigo': fila[0],
+                'nombre': fila[1],
+                'apellido': fila[2],
+                'direccion': fila[3],
+                'telefono': fila[4],
+                'email': fila[5]
+            }
             clientes.append(cliente)
-        return jsonify({'clientes':clientes, 'mensaje':"Clientes regisrados"})
+        return jsonify({'clientes': clientes, 'mensaje': "Clientes listados correctamente."})
     except Exception as ex:
-        print (ex)
-        return jsonify({'mensaje':"Error"})
+        return jsonify({'mensaje': "Error al listar clientes", 'error_detalle': str(ex)}), 500
 
 # Paso 14: Listar un cliente por código con el método GET
-@app.route('/clientes/<codigo>', methods=['GET']) # Se corrigió la URL para aceptar el código
+@app.route('/clientes/<codigo>', methods=['GET'])
 def leer_cliente(codigo):
     try:
-        cursor=conexion.connection.cursor()
-        sql="SELECT * FROM cliente WHERE codigo = '{0}'".format(codigo)
-        cursor.execute(sql)
+        cursor = db_connection.connection.cursor()
+        sql = "SELECT codigo, nombre, apellido, direccion, telefono, email FROM cliente WHERE codigo = %s"
+        cursor.execute(sql, (codigo,))
         datos = cursor.fetchone()
-        if datos != None:
-            # La variable 'curso' en el guion original parece ser un error de copia/pegado, se corrigió a 'cliente' para mayor claridad.
-            cliente={'codigo':datos[0], 'nombre':datos[1], 'apellido':datos[2],
-                       'direccion':datos[3], 'telefono':datos[4], 'email':datos[5]}
-            return jsonify({'cliente':cliente, 'mensaje':"Cliente Encontrado."})
+        if datos is not None:
+            cliente = {
+                'codigo': datos[0], 'nombre': datos[1], 'apellido': datos[2],
+                'direccion': datos[3], 'telefono': datos[4], 'email': datos[5]
+            }
+            return jsonify({'cliente': cliente, 'mensaje': "Cliente encontrado."})
         else:
-            return jsonify({'Mensaje': "Cliente no encontrado."})
+            return jsonify({'mensaje': "Cliente no encontrado."}), 404
     except Exception as ex:
-        return jsonify({'Mensaje': "Error."})
+        return jsonify({'mensaje': "Error al leer cliente", 'error_detalle': str(ex)}), 500
 
-# Paso 15: Ingresar clientes, utilizamos el método POST
-@app.route('/clientes',methods=['POST'])
+# Paso 15: Ingresar clientes con el método POST
+@app.route('/clientes', methods=['POST'])
 def registrar_cliente():
-    #print(request.json)
-    try:
-        cursor=conexion.connection.cursor()
-        # **NOTA:** Hay un error tipográfico en el guion original ('telenono' en lugar de 'telefono'), se usa el error original para mantener el código sin modificaciones.
-        sql = """INSERT INTO cliente (codigo, nombre, apellido, direccion, telenono,
-                 email)
-                 VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}'
-                )""".format(request.json['codigo'],request.json['nombre'],request.json['apellido'],
-                            request.json['direccion'], request.json['telefono'], request.json['email'])
-        cursor.execute(sql)
-        conexion.connection.commit()
-        return jsonify({'Mensaje': "Cliente registrado."})
-    except Exception as ex:
-        # Es útil imprimir la excepción para depuración
-        print(ex)
-        return jsonify({'Mensaje': "Error."})
+    required_fields = ['codigo', 'nombre', 'apellido', 'direccion', 'telefono', 'email']
+    if not all(field in request.json for field in required_fields):
+        return jsonify({'mensaje': "Faltan datos en la solicitud."}), 400
 
-# Paso 16: Creamos el función eliminación con el método DELETE
-@app.route('/clientes/<codigo>',methods=['DELETE']) # Se corrigió la URL para aceptar el código
+    try:
+        cursor = db_connection.connection.cursor()
+        sql = """INSERT INTO cliente (codigo, nombre, apellido, direccion, telefono, email)
+                 VALUES (%s, %s, %s, %s, %s, %s)"""
+        cursor.execute(sql, (
+            request.json['codigo'], request.json['nombre'], request.json['apellido'],
+            request.json['direccion'], request.json['telefono'], request.json['email']
+        ))
+        db_connection.connection.commit()
+        return jsonify({'mensaje': "Cliente registrado exitosamente."}), 201
+    except Exception as ex:
+        return jsonify({'mensaje': "Error al registrar cliente", 'error_detalle': str(ex)}), 500
+
+# Paso 16: Eliminar un cliente con el método DELETE
+@app.route('/clientes/<codigo>', methods=['DELETE'])
 def eliminar_cliente(codigo):
     try:
-        cursor=conexion.connection.cursor()
-        sql = "DELETE FROM cliente WHERE codigo = '{0}'".format(codigo)
-        cursor.execute(sql)
-        conexion.connection.commit()
-        # Se corrigió la comilla simple en el mensaje de éxito del guion original
-        return jsonify({'Mensaje': "Cliente Eliminado."})
+        cursor = db_connection.connection.cursor()
+        sql = "DELETE FROM cliente WHERE codigo = %s"
+        cursor.execute(sql, (codigo,))
+        db_connection.connection.commit()
+        if cursor.rowcount > 0:
+            return jsonify({'mensaje': "Cliente eliminado."})
+        else:
+            return jsonify({'mensaje': "Cliente no encontrado para eliminar."}), 404
     except Exception as ex:
-        # Se corrigió la comilla simple en el mensaje de error del guion original
-        return jsonify({'Mensaje': "Error."})
+        return jsonify({'mensaje': "Error al eliminar cliente", 'error_detalle': str(ex)}), 500
 
-# Paso 17: Creamos la función para actualizar un registro con el PUT
-@app.route('/clientes/<codigo>',methods=['PUT']) # Se corrigió la URL para aceptar el código
+# Paso 17: Actualizar un registro con el método PUT
+@app.route('/clientes/<codigo>', methods=['PUT'])
 def actualizar_cliente(codigo):
+    required_fields = ['nombre', 'apellido', 'direccion', 'telefono', 'email']
+    if not all(field in request.json for field in required_fields):
+        return jsonify({'mensaje': "Faltan datos para actualizar."}), 400
+
     try:
-        cursor=conexion.connection.cursor()
-        # **NOTA:** El guion original tiene un error grave en la sentencia SQL: el campo 'codigo' en el WHERE clause apunta a '{2}' (direccion) en lugar de '{5}' (codigo).
-        # Para cumplir con "no modificar ningun codigo", se deja el error original:
-        sql = """UPDATE cliente SET nombre = '{0}', apellido = '{1}', direccion = '{2}',
-                 telefono = '{3}', email = '{4}' WHERE codigo
-                 ='{2}'""".format(request.json['nombre'],request.json['apellido'],
-                                 request.json['direccion'],request.json['telefono'], request.json['email'],
-                                 codigo) # Aquí el 'codigo' es el índice {5}
-        cursor.execute(sql)
-        conexion.connection.commit()
-        return jsonify({'Mensaje': "Cliente Actualizado."})
+        cursor = db_connection.connection.cursor()
+        sql = """UPDATE cliente
+                 SET nombre = %s, apellido = %s, direccion = %s, telefono = %s, email = %s
+                 WHERE codigo = %s"""
+        cursor.execute(sql, (
+            request.json['nombre'], request.json['apellido'], request.json['direccion'],
+            request.json['telefono'], request.json['email'], codigo
+        ))
+        db_connection.connection.commit()
+        if cursor.rowcount > 0:
+            return jsonify({'mensaje': "Cliente actualizado."})
+        else:
+            return jsonify({'mensaje': "Cliente no encontrado para actualizar."}), 404
     except Exception as ex:
-        # Es útil imprimir la excepción para depuración
-        print(ex)
-        return jsonify({'Mensaje': "Error."})
+        return jsonify({'mensaje': "Error al actualizar cliente", 'error_detalle': str(ex)}), 500
 
-# Paso 18: Creamos una función para controlar los errores de Urls incorrectas
+# Paso 18: Manejador de error para URLs no encontradas (404)
 def pagina_no_encontrada(error):
-    # Se corrigió el retorno del guion original para que sea un retorno válido de Flask
-    return "<h1>Página no encontrada</h1>", 404
+    # Si la petición es para la API, devuelve JSON. Si no, una página de error.
+    if request.path.startswith('/clientes'):
+        return jsonify({'mensaje': "Recurso no encontrado."}), 404
+    return render_template('404.html'), 404
 
-# Paso 19: Creamos la función para ejecutar la aplicación
+# Paso 19: Ejecución de la aplicación
 if __name__ == '__main__':
     app.config.from_object(config['development'])
     app.register_error_handler(404, pagina_no_encontrada)

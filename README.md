@@ -3,54 +3,7 @@ ACTIVIDAD SERVICIOS REST PYTHON FLASK, MYSQL
 
 
 
-¡Hola! Veo que tienes una API Flask corriendo en http://127.0.0.1:5000/ y necesitas consumirla usando Thunder Client. El código que proporcionas define varios endpoints para gestionar clientes, incluyendo listado, consulta individual, registro, eliminación y actualización.
 
-Para que lo hagas correctamente, debes entender cómo mapear cada operación (GET, POST, PUT, DELETE) a la URL base http://127.0.0.1:5000/clientes y cómo enviar los datos necesarios.
-
-Estructura para Consumir la API con Thunder Client
-Aquí te indico cómo debes estructurar tus peticiones en Thunder Client (o cualquier cliente REST) para interactuar con tu API.
-
-1. Listar Todos los Clientes (GET)
-Lógica: Usas el método GET en la ruta base para obtener todos los registros.
-
-Método: GET
-
-URL: http://127.0.0.1:5000/clientes
-
-Body (Cuerpo): No necesitas enviar ningún cuerpo.
-
-Resultado Esperado: Un JSON con una lista de clientes y el mensaje "Clientes regisrados".
-
-2. Leer un Cliente por Código (GET)
-Lógica: Usas el método GET e incluyes el código del cliente en la URL.
-
-Método: GET
-
-URL: http://127.0.0.1:5000/clientes/C001 (Sustituye C001 por el código real del cliente).
-
-Body (Cuerpo): No necesitas enviar ningún cuerpo.
-
-Resultado Esperado: Un JSON con los detalles del cliente encontrado o el mensaje "Cliente no encontrado.".
-
-3. Registrar un Nuevo Cliente (POST)
-Lógica: Usas el método POST en la ruta base y envías los datos del nuevo cliente en formato JSON.
-
-Método: POST
-
-URL: http://127.0.0.1:5000/clientes
-
-Body (Cuerpo): Selecciona el tipo JSON y envía la información requerida. Importante: Según tu código, el campo para el teléfono tiene un error tipográfico (telenono), pero el input esperado del JSON es telefono. Debes enviar el JSON con la clave correcta que esperas en request.json['telefono'] para que funcione.
-
-JSON
-
-{
-    "codigo": "C001",
-    "nombre": "Juan",
-    "apellido": "Pérez",
-    "direccion": "Calle Falsa 123",
-    "telefono": "555-1234",
-    "email": "juan.perez@ejemplo.com"
-}
 
 
 ¡Hola! Veo que tienes una API Flask corriendo en http://127.0.0.1:5000/ y necesitas consumirla usando Thunder Client. El código que proporcionas define varios endpoints para gestionar clientes, incluyendo listado, consulta individual, registro, eliminación y actualización.
@@ -171,3 +124,29 @@ sudo apt install pkg-config libmysqlclient-dev build-essential python3-dev
 
 
  pip install Flask-MySQLdb
+
+
+
+
+
+
+
+
+REACT 
+
+
+npm install -D tailwindcss@latest postcss@latest autoprefixer@latest POR SI NO ARRANCA CON EL NPM RUN DEV
+
+
+npm install -D tailwindcss postcss autoprefixer
+
+
+
+
+
+
+cuando no muestra estilos 
+
+
+# Instalar el complemento de PostCSS de Tailwind
+npm install -D @tailwindcss/postcss
